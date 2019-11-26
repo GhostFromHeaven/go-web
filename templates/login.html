@@ -1,0 +1,17 @@
+<html>
+<head>
+    <title>login</title>
+</head>
+<body>
+<form method="post">
+    {{if .}}
+        <div>{{.}}</div>
+    {{end}}
+    <div>Username: <input name="username"/></div>
+    <div>Password: <input name="password"/></div>
+    <div>
+        <button type="submit">login</button>
+    </div>
+</form>
+</body>
+</html>
