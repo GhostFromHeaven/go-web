@@ -1,18 +1,25 @@
 <html>
 <head>
-    <title>Comments</title>
+    <title>{{ .Title }}</title>
     <link rel="stylesheet" type="text/css" href="/static/index.css">
 </head>
 <body>
-<h1>Comments</h1>
+<h1>{{ .Title }}</h1>
 <form action="/" method="post">
-    <textarea name="comment"></textarea>
+    <textarea name="update"></textarea>
     <div>
         <button type="submit">Post Comment</button>
     </div>
 </form>
-{{ range . }}
-    <div>{{.}}</div>
+{{ range .Updates }}
+    <div class="update">
+        <div>
+            <strong>{{ .GetUser.GetUsername }} wrote:</strong>
+        </div>
+        <div>
+            {{ .GetBody }}
+        </div>
+    </div>
 {{end}}
 </body>
 </html>

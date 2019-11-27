@@ -3,10 +3,9 @@ package routes
 import (
 	"gfh.com/web/middleware"
 	"gfh.com/web/models"
-	"gfh.com/web/session"
+	"gfh.com/web/sessions"
 	"gfh.com/web/utils"
 	"github.com/gorilla/mux"
-	"log"
 	"net/http"
 )
 
@@ -16,6 +15,7 @@ func NewRouter() *mux.Router {
 	r.HandleFunc("/", middleware.AuthRequired(indexPostHandler)).Methods("POST")
 	r.HandleFunc("/login", loginGetHandler).Methods("GET")
 	r.HandleFunc("/login", loginPostHandler).Methods("POST")
+	r.HandleFunc("/logout", logoutGetHandler).Methods("GET")
 	r.HandleFunc("/register", registerGetHandler).Methods("GET")
 	r.HandleFunc("/register", registerPostHandler).Methods("POST")
 	fs := http.FileServer(http.Dir("./static/"))
@@ -24,23 +24,29 @@ func NewRouter() *mux.Router {
 }
 
 func indexGetHandler(w http.ResponseWriter, r *http.Request) {
-	comments, err := models.GetComments()
+	updates, err := models.GetAllUpdates()
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte("Internal server error"))
+		utils.InternalServerError(w)
 		return
 	}
-	utils.ExecuteTemplate(w, "index.html", comments)
+	utils.ExecuteTemplate(w, "index.html", map[string]interface{}{
+		"Title":   "All Updates",
+		"Updates": updates,
+	})
 }
 
 func indexPostHandler(w http.ResponseWriter, r *http.Request) {
+	userId, ok := sessions.GetUserId(r)
+	if !ok {
+		utils.InternalServerError(w)
+		return
+	}
+
 	r.ParseForm()
-	comment := r.PostForm.Get("comment")
-	err := models.SaveComment(comment)
+	body := r.PostForm.Get("update")
+	_, err := models.SaveUpdate(userId, body)
 	if err != nil {
-		log.Println(err)
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte("Internal server error"))
+		utils.InternalServerError(w)
 		return
 	}
 	http.Redirect(w, r, "/", 302)
@@ -68,13 +74,18 @@ func loginPostHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = session.SaveSession(w, r, user)
+	err = sessions.SaveSession(w, r, user)
 	if err != nil {
 		utils.InternalServerError(w)
 		return
 	}
 
 	http.Redirect(w, r, "/", 302)
+}
+
+func logoutGetHandler(w http.ResponseWriter, r *http.Request) {
+	sessions.ClearSession(w, r)
+	http.Redirect(w, r, "/login", 302)
 }
 
 func registerGetHandler(w http.ResponseWriter, r *http.Request) {
