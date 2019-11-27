@@ -1,16 +1,16 @@
 <html>
 <head>
-    <title>login</title>
+    <title>Login</title>
 </head>
 <body>
 <form method="post">
-    {{if .}}
-        <div>{{.}}</div>
-    {{end}}
-    <div>Username: <input name="username"/></div>
-    <div>Password: <input name="password"/></div>
+    {{ if . }}
+        <div class="error">{{ . }}</div>
+    {{ end }}
+    <div>Username: <input name="username"></div>
+    <div>Password: <input name="password"></div>
     <div>
-        <button type="submit">login</button>
+        <button type="submit">Login</button>
     </div>
 </form>
 </body>

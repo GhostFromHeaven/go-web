@@ -1,13 +1,16 @@
 <html>
 <head>
-    <title>register</title>
+    <title>Register</title>
 </head>
 <body>
 <form method="post">
-    <div>Username: <input name="username"/></div>
-    <div>Password: <input name="password"/></div>
+    {{ if . }}
+        <div class="error">{{ . }}</div>
+    {{ end }}
+    <div>Username: <input name="username"></div>
+    <div>Password: <input name="password"></div>
     <div>
-        <button type="submit">register</button>
+        <button type="submit">Register</button>
     </div>
 </form>
 </body>

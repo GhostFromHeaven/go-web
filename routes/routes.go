@@ -3,6 +3,7 @@ package routes
 import (
 	"gfh.com/web/middleware"
 	"gfh.com/web/models"
+	"gfh.com/web/session"
 	"gfh.com/web/utils"
 	"github.com/gorilla/mux"
 	"log"
@@ -53,7 +54,8 @@ func loginPostHandler(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
 	username := r.PostForm.Get("username")
 	password := r.PostForm.Get("password")
-	err := models.AuthenticateUser(username, password)
+
+	user, err := models.AuthenticateUser(username, password)
 	if err != nil {
 		switch err {
 		case models.ErrUserNotFound:
@@ -61,12 +63,17 @@ func loginPostHandler(w http.ResponseWriter, r *http.Request) {
 		case models.ErrInvalidLogin:
 			utils.ExecuteTemplate(w, "login.html", "invalid login")
 		default:
-			utils.ExecuteTemplate(w, "login.html", "invalid login")
+			utils.InternalServerError(w)
 		}
 		return
 	}
 
-	middleware.SaveSession(w, r, username)
+	err = session.SaveSession(w, r, user)
+	if err != nil {
+		utils.InternalServerError(w)
+		return
+	}
+
 	http.Redirect(w, r, "/", 302)
 }
 
@@ -79,10 +86,12 @@ func registerPostHandler(w http.ResponseWriter, r *http.Request) {
 	username := r.PostForm.Get("username")
 	password := r.PostForm.Get("password")
 
-	err := models.RegisterUser(username, password)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte("Internal server error"))
+	_, err := models.RegisterUser(username, password)
+	if err == models.ErrUsernameTaken {
+		utils.ExecuteTemplate(w, "register.html", "username taken")
+		return
+	} else if err != nil {
+		utils.InternalServerError(w)
 		return
 	}
 
