@@ -20,6 +20,7 @@ func NewRouter() *mux.Router {
 	r.HandleFunc("/register", registerPostHandler).Methods("POST")
 	fs := http.FileServer(http.Dir("./static/"))
 	r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", fs))
+	r.HandleFunc("/{username}", middleware.AuthRequired(userGetHandler)).Methods("GET")
 	return r
 }
 
@@ -29,9 +30,11 @@ func indexGetHandler(w http.ResponseWriter, r *http.Request) {
 		utils.InternalServerError(w)
 		return
 	}
+
 	utils.ExecuteTemplate(w, "index.html", map[string]interface{}{
-		"Title":   "All Updates",
-		"Updates": updates,
+		"Title":       "All Updates",
+		"Updates":     updates,
+		"DisplayForm": true,
 	})
 }
 
@@ -49,9 +52,46 @@ func indexPostHandler(w http.ResponseWriter, r *http.Request) {
 		utils.InternalServerError(w)
 		return
 	}
-	http.Redirect(w, r, "/", 302)
+	redirect(w, r, "/")
 }
 
+func userGetHandler(w http.ResponseWriter, r *http.Request) {
+	// get current user' id
+	currentUserId, ok := sessions.GetUserId(r)
+	if !ok {
+		utils.InternalServerError(w)
+		return
+	}
+
+	// get user from path
+	vars := mux.Vars(r)
+	username := vars["username"]
+	user, err := models.GetUserByUsername(username)
+	if err != nil {
+		utils.InternalServerError(w)
+		return
+	}
+
+	// get user id
+	userId, err := user.GetId()
+	if err != nil {
+		utils.InternalServerError(w)
+		return
+	}
+
+	// get user's updates
+	updates, err := models.GetUserUpdates(userId)
+	if err != nil {
+		utils.InternalServerError(w)
+		return
+	}
+
+	utils.ExecuteTemplate(w, "index.html", map[string]interface{}{
+		"Title":       username,
+		"Updates":     updates,
+		"DisplayForm": currentUserId == userId,
+	})
+}
 func loginGetHandler(w http.ResponseWriter, r *http.Request) {
 	utils.ExecuteTemplate(w, "login.html", nil)
 }
@@ -80,12 +120,12 @@ func loginPostHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	http.Redirect(w, r, "/", 302)
+	redirect(w, r, "/")
 }
 
 func logoutGetHandler(w http.ResponseWriter, r *http.Request) {
 	sessions.ClearSession(w, r)
-	http.Redirect(w, r, "/login", 302)
+	redirect(w, r, "/login")
 }
 
 func registerGetHandler(w http.ResponseWriter, r *http.Request) {
@@ -106,5 +146,9 @@ func registerPostHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	http.Redirect(w, r, "/login", 302)
+	redirect(w, r, "/login")
+}
+
+func redirect(w http.ResponseWriter, r *http.Request, url string) {
+	http.Redirect(w, r, url, 302)
 }
